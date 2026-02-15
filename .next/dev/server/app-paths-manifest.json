@@ -1,0 +1,12 @@
+{
+  "/(catalog)/product/create/page": "app/(catalog)/product/create/page.js",
+  "/(catalog)/product/edit/[productId]/page": "app/(catalog)/product/edit/[productId]/page.js",
+  "/(catalog)/products/page": "app/(catalog)/products/page.js",
+  "/(catalog)/test/page": "app/(catalog)/test/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/category/tree/route": "app/api/category/tree/route.js",
+  "/page": "app/page.js",
+  "/product5/[id]/page": "app/product5/[id]/page.js",
+  "/product5/create/page": "app/product5/create/page.js",
+  "/product5/page": "app/product5/page.js"
+}

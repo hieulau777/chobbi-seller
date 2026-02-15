@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+:root {
+  /* Bảng màu thương hiệu */
+  --background: #f8f9fa; /* Light Gray - nền trang */
+  --foreground: #34302d; /* Dark Charcoal - chữ chính */
+
+  --primary: #6db33f; /* Spring Green - logo, nút chính */
+  --primary-light: color-mix(in srgb, var(--primary) 75%, white);
+  --header-bg: linear-gradient(to bottom, var(--primary) 0%, var(--primary-light) 100%);
+  --primary-foreground: #ffffff;
+
+  --secondary: #34302d; /* Header, tiêu đề */
+  --secondary-foreground: #f8f9fa;
+
+  --muted: #f8f9fa; /* Nền card, vùng phụ */
+  --muted-foreground: #34302d;
+
+  --accent: #009087; /* Icon, link phụ */
+  --accent-foreground: #ffffff;
+
+  --destructive: #dc3545;
+  --destructive-foreground: #ffffff;
+
+  --border: #dee2e6; /* Viền, đường kẻ */
+  --input: #dee2e6;
+  --ring: #009087;
+
+  --radius: 0.5rem;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
