@@ -42,6 +42,7 @@ export type ProductDetailResponse = {
   productId: number;
   productName: string;
   description: string;
+  weight?: number;
   images: ProductImageDto[];
   tiers: ProductTierDto[];
   optionImages: unknown[];

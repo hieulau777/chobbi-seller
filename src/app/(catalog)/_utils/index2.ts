@@ -20,7 +20,7 @@ export function capitalizeVariationName(name: string | null | undefined): string
 export function getImageUrl(img: string | null | undefined): string {
   if (!img || !img.trim()) return "/file.svg";
   if (img.startsWith("http://") || img.startsWith("https://")) return img;
-  if (img.startsWith("/api/static/")) return img;
+  if (img.startsWith("/api/backend/static/")) return img;
   const path = img.startsWith("/") ? img.slice(1) : img;
-  return `/api/static/${path}`;
+  return `/api/backend/static/${path}`;
 }

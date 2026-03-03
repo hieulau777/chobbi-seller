@@ -1,4 +1,4 @@
-import type { CategoryNode } from "../types";
+import type { CategoryNode } from "../_types";
 
 export function buildCategoryColumns(
   categories: CategoryNode[],

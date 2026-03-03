@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
   Package,
   PlusCircle,
@@ -19,18 +21,153 @@ import {
   CreditCard,
   HelpCircle,
   FileText,
+  Bell,
 } from "lucide-react";
+import { useSellerNotificationRealtime } from "@/hooks/useSellerNotificationRealtime";
+import type { NotificationDto } from "@/types/notification";
+import apiClient from "@/lib/api-client";
+import { logout as clearBackendToken } from "@/lib/auth";
+
+const TOAST_DURATION_MS = 6000;
 
 export function SellerShell({ children }: { children: React.ReactNode }) {
   const [openMenu, setOpenMenu] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [realtimeToast, setRealtimeToast] = useState<NotificationDto | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const originalTitleRef = useRef<string | null>(null);
+  const blinkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+
+  const {
+    data: notifications = [],
+    isFetching: notificationsLoading,
+    refetch: refetchNotifications,
+  } = useQuery<NotificationDto[]>({
+    queryKey: ["notifications"],
+    queryFn: async () => {
+      const res = await apiClient.get<NotificationDto[]>("/notification/seller");
+      return res.data ?? [];
+    },
+    staleTime: 30 * 1000,
+  });
+
+  const showToast = (dto: NotificationDto) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setRealtimeToast(dto);
+    toastTimeoutRef.current = setTimeout(() => {
+      setRealtimeToast(null);
+      toastTimeoutRef.current = null;
+    }, TOAST_DURATION_MS);
+  };
+
+  const handleRealtimeNotification = (dto: NotificationDto) => {
+    if (dto.targetRole !== "SELLER") return;
+    showToast(dto);
+    queryClient.setQueryData<NotificationDto[] | undefined>(
+      ["notifications"],
+      (prev) => (prev ? [dto, ...prev] : [dto])
+    );
+  };
+
+  useSellerNotificationRealtime(handleRealtimeNotification);
+
+  useEffect(() => {
+    if (typeof document !== "undefined" && !originalTitleRef.current) {
+      originalTitleRef.current = document.title;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const clearBlink = () => {
+      if (blinkIntervalRef.current) {
+        clearInterval(blinkIntervalRef.current);
+        blinkIntervalRef.current = null;
+      }
+      if (originalTitleRef.current) {
+        document.title = originalTitleRef.current;
+      }
+    };
+
+    if (!realtimeToast) {
+      clearBlink();
+      return;
+    }
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        clearBlink();
+      }
+    };
+
+    if (document.hidden) {
+      const newTitle = "🔔 Bạn có thông báo mới";
+      let showNew = true;
+      blinkIntervalRef.current = setInterval(() => {
+        document.title = showNew
+          ? newTitle
+          : originalTitleRef.current || document.title;
+        showNew = !showNew;
+      }, 1200);
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearBlink();
+    };
+  }, [realtimeToast]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   const isProducts = pathname === "/products" || pathname === "/";
   const isCreate = pathname === "/product/create";
+  const isOrders = pathname === "/orders";
+
+  const statusParam = searchParams.get("status");
+
+  const notificationsCount = notifications.length;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[var(--background)]">
+      {/* Real-time notification toast */}
+      {realtimeToast && (
+        <div
+          className="fixed right-4 top-4 z-[100] flex max-w-sm items-start gap-3 rounded-lg border border-[var(--border)] bg-white p-4 shadow-lg ring-1 ring-black/5"
+          role="alert"
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--primary)]/15 text-[var(--primary)]">
+            <Bell className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-[var(--foreground)]">
+              Đơn hàng mới
+            </p>
+            <p className="mt-0.5 text-sm text-[var(--muted-foreground)]">
+              {realtimeToast.message}
+            </p>
+            {realtimeToast.orderId != null && (
+              <Link
+                href={`/orders?highlight=${realtimeToast.orderId}`}
+                className="mt-2 inline-block text-sm font-medium text-[var(--primary)] hover:underline"
+              >
+                Xem đơn #{realtimeToast.orderId} →
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header — cố định trên cùng */}
       <header
         className="flex-shrink-0 border-b border-white/15 text-white shadow-sm"
@@ -53,7 +190,94 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
 
-          <div className="relative">
+          <div className="flex items-center gap-4">
+            {/* Notification bell */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setNotificationsOpen((prev) => !prev);
+                  refetchNotifications();
+                }}
+                className="relative flex items-center justify-center rounded-full bg-white/10 p-2.5 text-white shadow-sm ring-1 ring-white/20 transition hover:bg-white/20 hover:ring-white/30"
+                aria-label="Thông báo"
+              >
+                <Bell className="size-5" />
+                {notificationsCount > 0 && (
+                  <span className="absolute -right-1 -top-1 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold leading-none text-white shadow-md">
+                    {notificationsCount > 9 ? "9+" : notificationsCount}
+                  </span>
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    aria-hidden
+                    onClick={() => setNotificationsOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full z-20 mt-2 w-96 overflow-hidden rounded-xl border border-[var(--border)] bg-white text-[var(--foreground)] shadow-xl ring-1 ring-black/5">
+                    <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--muted)]/40 px-4 py-3">
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        Thông báo
+                      </p>
+                      {notificationsLoading && (
+                        <span className="text-xs text-[var(--muted-foreground)]">
+                          Đang tải...
+                        </span>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto bg-white">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-sm text-[var(--muted-foreground)]">
+                          Chưa có thông báo nào.
+                        </div>
+                      ) : (
+                        <ul className="divide-y divide-[var(--border)]/70">
+                          {notifications.map((n) => (
+                            <li key={n.id} className="px-4 py-3 hover:bg-[var(--muted)]/20">
+                              <div className="flex items-start gap-3">
+                                <span className="mt-0.5 flex size-7 items-center justify-center rounded-full bg-[var(--primary)]/10 text-[var(--primary)]">
+                                  <Bell className="size-4" />
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-[var(--foreground)]">
+                                    {n.message}
+                                  </p>
+                                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--muted-foreground)]">
+                                    {n.orderId != null && (
+                                      <Link
+                                        href={`/orders?highlight=${n.orderId}`}
+                                        className="font-medium text-[var(--primary)] hover:underline"
+                                      >
+                                        Đơn #{n.orderId}
+                                      </Link>
+                                    )}
+                                    <span>
+                                      {new Date(n.createdAt).toLocaleString("vi-VN", {
+                                        day: "2-digit",
+                                        month: "2-digit",
+                                        year: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* User menu */}
+            <div className="relative">
             <button
               type="button"
               onClick={() => setUserMenuOpen((prev) => !prev)}
@@ -107,6 +331,16 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                     <button
                       type="button"
                       className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-[var(--destructive)] transition-colors hover:bg-[var(--destructive)]/10"
+                      onClick={async () => {
+                        try {
+                          await apiClient.post("/auth/logout");
+                        } catch {
+                          // ignore
+                        } finally {
+                          clearBackendToken();
+                          await signOut({ callbackUrl: "/login" });
+                        }
+                      }}
                     >
                       <LogOut className="size-4" />
                       Đăng xuất
@@ -117,6 +351,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </div>
+      </div>
       </header>
 
       {/* Body: sidebar + content, chiều cao = phần còn lại dưới header */}
@@ -176,27 +411,39 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                 Đơn hàng
               </p>
               <div className="flex flex-col gap-0.5">
-                <button
-                  type="button"
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
+                <Link
+                  href="/orders"
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    isOrders && !statusParam
+                      ? "bg-[var(--primary)]/10 font-medium text-[var(--primary)]"
+                      : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                  }`}
                 >
                   <ClipboardList className="size-4 text-[var(--muted-foreground)]" />
                   Đơn chờ xử lý
-                </button>
-                <button
-                  type="button"
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
+                </Link>
+                <Link
+                  href="/orders?status=SHIPPED"
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    isOrders && statusParam === "SHIPPED"
+                      ? "bg-[var(--primary)]/10 font-medium text-[var(--primary)]"
+                      : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                  }`}
                 >
                   <Truck className="size-4 text-[var(--muted-foreground)]" />
                   Đơn đang giao
-                </button>
-                <button
-                  type="button"
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
+                </Link>
+                <Link
+                  href="/orders?status=CANCELED"
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    isOrders && statusParam === "CANCELED"
+                      ? "bg-[var(--primary)]/10 font-medium text-[var(--primary)]"
+                      : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                  }`}
                 >
                   <CheckCircle className="size-4 text-[var(--muted-foreground)]" />
-                  Đơn đã hoàn thành
-                </button>
+                  Đơn đã hủy
+                </Link>
               </div>
             </div>
 

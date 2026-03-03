@@ -5,7 +5,7 @@ import type {
   ClassificationGroup,
   VariationRow,
   FirstColSpanInfo,
-} from "../../types";
+} from "../_types";
 
 type SalesInfoSectionProps = {
   classifications: ClassificationGroup[];

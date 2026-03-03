@@ -1,7 +1,7 @@
 import type {
   ProductDetailResponse,
   ClassificationGroup,
-} from "../types";
+} from "../_types";
 
 type AttributeSelections = Record<number, number[]>;
 type VariationValues = Record<string, { price: string; stock: string }>;
@@ -9,6 +9,7 @@ type VariationValues = Record<string, { price: string; stock: string }>;
 export type MappedProductFormData = {
   name: string;
   description: string;
+  weight: number;
   attributeSelections: AttributeSelections;
   classifications: ClassificationGroup[];
   variationValues: VariationValues;
@@ -20,6 +21,7 @@ export function mapProductToFormData(
 ): MappedProductFormData {
   const name = product.productName;
   const description = product.description ?? "";
+  const weight = product.weight ?? 0;
 
   const attributeSelections: AttributeSelections = {};
   for (const sa of product.selectedAttributes ?? []) {
@@ -64,6 +66,7 @@ export function mapProductToFormData(
   return {
     name,
     description,
+    weight,
     attributeSelections,
     classifications,
     variationValues,

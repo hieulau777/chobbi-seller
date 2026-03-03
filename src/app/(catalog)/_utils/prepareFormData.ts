@@ -3,8 +3,8 @@ import type {
   ReadProductAttributesDto,
   ClassificationGroup,
   VariationRow,
-} from "../types";
-import type { ProductImageItem } from "../hooks/useImageUpload";
+} from "../_types";
+import type { ProductImageItem } from "../_hooks/useImageUpload";
 
 type FirstOptionImagesMap = Record<string, { file: File; previewUrl: string }>;
 
@@ -13,6 +13,7 @@ export type PrepareFormDataParams = {
   productId?: number | null;
   productName: string;
   productDescription: string;
+  weight: number;
   selectedLeaf: CategoryNode;
   productImages: ProductImageItem[];
   attributes: ReadProductAttributesDto[];
@@ -29,6 +30,7 @@ export function prepareFormData(params: PrepareFormDataParams): FormData {
     productId,
     productName,
     productDescription,
+    weight,
     selectedLeaf,
     productImages,
     attributes,
@@ -157,6 +159,7 @@ export function prepareFormData(params: PrepareFormDataParams): FormData {
     categoryId: selectedLeaf.id,
     name: productName,
     description: productDescription,
+    weight: Number(weight) >= 0 ? Number(weight) : 0,
     images,
     attributes: attributesList,
     tiers,

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SellerShell } from "../components/SellerShell";
 import { QueryProvider } from "../providers/QueryProvider";
+import { SessionProvider } from "@/components/SessionProvider";
+import { AlertTokenAfterAuth } from "@/components/AlertTokenAfterAuth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,9 +30,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-[var(--background)] text-[var(--foreground)] antialiased`}
       >
-        <QueryProvider>
-        <SellerShell>{children}</SellerShell>
-      </QueryProvider>
+        <SessionProvider>
+          <AlertTokenAfterAuth />
+          <QueryProvider>{children}</QueryProvider>
+        </SessionProvider>
       </body>
     </html>
   );

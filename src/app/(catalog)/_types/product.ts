@@ -14,4 +14,5 @@ export interface ReadProductVariationSellerDto {
 
 export interface AllProductsPagePanelProps {
   products: ReadProductSellerDto[];
+  shopId: number;
 }

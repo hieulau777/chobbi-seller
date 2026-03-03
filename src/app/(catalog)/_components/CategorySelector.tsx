@@ -1,7 +1,7 @@
 "use client";
 
 import { Pencil } from "lucide-react";
-import type { CategoryNode } from "../../types";
+import type { CategoryNode } from "../_types";
 
 type CategorySelectorProps = {
   selectedLeaf: CategoryNode | null;

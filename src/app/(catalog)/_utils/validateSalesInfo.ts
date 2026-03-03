@@ -1,4 +1,4 @@
-import type { ClassificationGroup, VariationRow } from "../types";
+import type { ClassificationGroup, VariationRow } from "../_types";
 
 export function validateSalesInfo(
   classifications: ClassificationGroup[],

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import axios from "axios";
+import apiClient from "@/lib/api-client";
+import { useMyShop } from "@/hooks/useMyShop";
 
 import { ProductForm } from "../../../_components/ProductForm";
 import { useCategoryTree } from "../../../_hooks/useCategoryTree";
@@ -14,12 +15,29 @@ import { mapProductToFormData } from "../../../_utils/index";
 import { getImageUrl } from "../../../_utils/index2";
 import type { ProductDetailResponse } from "../../../_types";
 
+function slugify(text: string): string {
+  return (
+    text
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w\-]+/g, "")
+      .replace(/\-\-+/g, "-")
+      .replace(/^-|-$/g, "") || "san-pham"
+  );
+}
+
+const MARKETPLACE_BASE_URL =
+  process.env.NEXT_PUBLIC_CLIENT_BASE_URL ?? "http://localhost:3000";
+
 export default function EditProductPage() {
   const params = useParams<{ productId: string }>();
   const productId = Number(params?.productId);
 
+  const { shop } = useMyShop();
+
   const [initialFormValues, setInitialFormValues] = useState<
-    { productName: string; productDescription: string } | null
+    { productName: string; productDescription: string; weight: number } | null
   >(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<
     number | null
@@ -41,8 +59,8 @@ export default function EditProductPage() {
     const loadProduct = async () => {
       try {
         setLoadingProduct(true);
-        const res = await axios.get<ProductDetailResponse>(
-          `/api/product/${productId}`,
+        const res = await apiClient.get<ProductDetailResponse>(
+          `/product/${productId}`,
         );
         const data = res.data;
         const mapped = mapProductToFormData(data);
@@ -50,6 +68,7 @@ export default function EditProductPage() {
         setInitialFormValues({
           productName: mapped.name,
           productDescription: mapped.description ?? "",
+          weight: mapped.weight ?? 0,
         });
         setSelectedCategoryId(mapped.selectedCategoryId);
         setAttributes(data.attributes ?? []);
@@ -109,6 +128,12 @@ export default function EditProductPage() {
     );
   }
 
+  const slug = slugify(initialFormValues.productName);
+  const marketplaceHref =
+    shop?.id != null
+      ? `${MARKETPLACE_BASE_URL}/${slug}.${shop.id}.${productId}`
+      : null;
+
   return (
     <ProductForm
       category={category}
@@ -121,6 +146,17 @@ export default function EditProductPage() {
       submitButtonLabel="Lưu thay đổi"
       backHref="/product5"
       backLabel="Quay lại danh sách"
+      headerAction={
+        marketplaceHref ? (
+          <Link
+            href={marketplaceHref}
+            target="_blank"
+            className="rounded-full bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-[var(--primary)]/90"
+          >
+            Xem trên marketplace
+          </Link>
+        ) : undefined
+      }
     />
   );
 }

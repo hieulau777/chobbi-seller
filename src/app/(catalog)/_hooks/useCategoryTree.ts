@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import axios from "axios";
+import apiClient from "@/lib/api-client";
 import type { CategoryNode } from "../_types";
 import { buildCategoryColumns, findCategoryPathById } from "../_utils/index";
 
@@ -28,8 +28,8 @@ export function useCategoryTree(
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
   useEffect(() => {
-    axios
-      .get<CategoryNode[]>("/api/category/tree")
+    apiClient
+      .get<CategoryNode[]>("/category/tree")
       .then((res) => setCategories(res.data ?? []))
       .catch(() => setCategoryError("Không tải được cây ngành hàng."))
       .finally(() => setLoadingCategories(false));

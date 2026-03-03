@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import axios from "axios";
-import type { ReadProductAttributesDto } from "../types";
+import apiClient from "@/lib/api-client";
+import type { ReadProductAttributesDto } from "../_types";
 
 export function useAttributes() {
   const [attributes, setAttributes] = useState<ReadProductAttributesDto[]>([]);
@@ -15,8 +15,8 @@ export function useAttributes() {
   const loadAttributes = useCallback((categoryId: number) => {
     setLoadingAttributes(true);
     setAttributesError(null);
-    axios
-      .get<ReadProductAttributesDto[]>(`/api/category/${categoryId}/attributes`)
+    apiClient
+      .get<ReadProductAttributesDto[]>(`/category/${categoryId}/attributes`)
       .then((res) => setAttributes(res.data ?? []))
       .catch(() => setAttributesError("Không tải được thuộc tính."))
       .finally(() => setLoadingAttributes(false));

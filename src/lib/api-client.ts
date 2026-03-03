@@ -1,25 +1,38 @@
 import axios from "axios";
 
+/**
+ * API client cho Seller:
+ * - Luôn gọi qua /api/backend/* (Next.js rewrite → backend:9090) → tránh CORS hoàn toàn.
+ * - Tự động gắn JWT từ localStorage.token nếu có.
+ */
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
-  // Lưu ý: Không để Content-Type ở đây để Axios tự xử lý linh hoạt
+  baseURL: "/api/backend",
 });
 
-// Interceptor cho Request (ví dụ thêm Token)
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers = config.headers ?? {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
 
-// Interceptor cho Response (xử lý lỗi tập trung)
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error.response?.data?.message || "Đã có lỗi xảy ra";
-    console.error("API Error:", message);
+    // Log chi tiết hơn để debug dễ: URL, status, message backend (nếu có)
+    const status = error.response?.status;
+    const url = error.config?.url;
+    const backendMessage = error.response?.data?.message;
+    console.error(
+      "[Seller API Error]",
+      status ? `status=${status}` : "no-status",
+      url ? `url=${url}` : "",
+      backendMessage ? `message=${backendMessage}` : ""
+    );
     return Promise.reject(error);
   }
 );

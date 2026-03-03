@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
+import apiClient from "@/lib/api-client";
 import type { ReadProductSellerDto } from "../_types/product";
 
 export function useProductsList(shopId: number) {
@@ -10,8 +10,8 @@ export function useProductsList(shopId: number) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    axios
-      .get<ReadProductSellerDto[]>("/api/product/list", {
+    apiClient
+      .get<ReadProductSellerDto[]>("/product/list", {
         params: { shopId },
       })
       .then((res) => {
