@@ -6,11 +6,16 @@ import type {
 } from "../_types";
 import type { ProductImageItem } from "../_hooks/useImageUpload";
 
-type FirstOptionImagesMap = Record<string, { file: File; previewUrl: string }>;
+type FirstOptionImagesMap = Record<
+  string,
+  { file?: File | null; previewUrl: string }
+>;
 
 export type PrepareFormDataParams = {
   shopId: number;
   productId?: number | null;
+  /** ACTIVE hoặc DRAFT */
+  status: "ACTIVE" | "DRAFT";
   productName: string;
   productDescription: string;
   weight: number;
@@ -28,6 +33,7 @@ export function prepareFormData(params: PrepareFormDataParams): FormData {
   const {
     shopId,
     productId,
+    status,
     productName,
     productDescription,
     weight,
@@ -78,13 +84,13 @@ export function prepareFormData(params: PrepareFormDataParams): FormData {
     options: Array<{ id: number | null; name: string }>;
     hasImages: boolean;
   }> | null = null;
-  let optionImages: Array<{
+  const optionImages: Array<{
     tierId: number | null;
     tierName: string;
     optionId: number | null;
     optionName: string;
     imageName: string;
-  }> | null = null;
+  }> = [];
   let variations: Array<{
     id: number | null;
     price: number;
@@ -105,21 +111,7 @@ export function prepareFormData(params: PrepareFormDataParams): FormData {
       hasImages: tierIndex === 0,
     }));
 
-    if (Object.keys(firstOptionImages).length > 0) {
-      optionImages = Object.entries(firstOptionImages).map(
-        ([optionName, img], idx) => {
-          const ext = img.file.name.split(".").pop() || "jpg";
-          const uniqueName = `opt_${optionName.replace(/\s/g, "_")}_${ts}_${idx}.${ext}`;
-          return {
-            tierId: null,
-            tierName: classificationsWithOptions[0].name,
-            optionId: null,
-            optionName,
-            imageName: uniqueName,
-          };
-        },
-      );
-    }
+    // chỉ gửi những option có file mới upload; option có ảnh cũ (từ backend) mà không thay đổi thì giữ nguyên, không gửi lại
 
     variations = variationRows
       .filter((row): row is { key: string; labels: string[] } => row !== null)
@@ -153,9 +145,35 @@ export function prepareFormData(params: PrepareFormDataParams): FormData {
     ];
   }
 
+  const filesToRename: Array<{ file: File; newName: string }> = [];
+  productImages.forEach((item, i) => {
+    if (item.file) {
+      filesToRename.push({ file: item.file, newName: productImageNames[i] });
+    }
+  });
+  Object.entries(firstOptionImages).forEach(([optionName, img], idx) => {
+    let imageName = "";
+    if (img.file) {
+      const ext = img.file.name.split(".").pop() || "jpg";
+      imageName = `opt_${optionName.replace(/\s/g, "_")}_${ts}_${idx}.${ext}`;
+      filesToRename.push({ file: img.file, newName: imageName });
+    }
+    // Luôn gửi optionImages cho những option đang có/giữ ảnh.
+    // - Có file mới  => imageName != "" và có multipart tương ứng (update ảnh)
+    // - Không có file => imageName = "" (giữ ảnh cũ nếu có)
+    optionImages.push({
+      tierId: null,
+      tierName: classificationsWithOptions[0]?.name ?? "",
+      optionId: null,
+      optionName,
+      imageName,
+    });
+  });
+
   const productRequest = {
     shopId,
     productId: productId ?? null,
+    status,
     categoryId: selectedLeaf.id,
     name: productName,
     description: productDescription,
@@ -163,7 +181,7 @@ export function prepareFormData(params: PrepareFormDataParams): FormData {
     images,
     attributes: attributesList,
     tiers,
-    optionImages: optionImages ?? [],
+    optionImages,
     variations,
   };
 
@@ -173,18 +191,6 @@ export function prepareFormData(params: PrepareFormDataParams): FormData {
     new Blob([JSON.stringify(productRequest)], { type: "application/json" }),
     "product.json",
   );
-
-  const filesToRename: Array<{ file: File; newName: string }> = [];
-  productImages.forEach((item, i) => {
-    if (item.file) {
-      filesToRename.push({ file: item.file, newName: productImageNames[i] });
-    }
-  });
-  Object.entries(firstOptionImages).forEach(([optionName, img], idx) => {
-    const ext = img.file.name.split(".").pop() || "jpg";
-    const uniqueName = `opt_${optionName.replace(/\s/g, "_")}_${ts}_${idx}.${ext}`;
-    filesToRename.push({ file: img.file, newName: uniqueName });
-  });
 
   for (const { file, newName } of filesToRename) {
     formData.append("media", new File([file], newName, { type: file.type }));

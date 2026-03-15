@@ -18,7 +18,7 @@ export function useSalesInfo() {
   >({});
   const [optionDrafts, setOptionDrafts] = useState<Record<string, string>>({});
   const [firstOptionImages, setFirstOptionImages] = useState<
-    Record<string, { file: File; previewUrl: string }>
+    Record<string, { file?: File | null; previewUrl: string }>
   >({});
 
   const classificationsWithOptions = useMemo(
@@ -192,6 +192,7 @@ export function useSalesInfo() {
     optionDrafts,
     setOptionDrafts,
     firstOptionImages,
+    setFirstOptionImages,
     salesInfoErrors,
     validate,
     addClassification,

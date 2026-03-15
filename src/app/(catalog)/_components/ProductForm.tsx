@@ -1,13 +1,17 @@
 "use client";
 
 import { useState, useEffect, type ReactNode } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import apiClient from "@/lib/api-client";
 import { useMyShop } from "@/hooks/useMyShop";
 import axios from "axios";
 import Link from "next/link";
 import { CheckCircle2, AlertCircle, X } from "lucide-react";
+import { DisabledOverlay } from "./DisabledOverlay";
+
+const PUBLISH_CONFIRM_MESSAGE =
+  "Xác nhận publish sản phẩm lên marketplace. Sau khi publish sản phẩm thì bạn chỉ có thể cập nhật mô tả sản phẩm, thuộc tính sản phẩm, hình ảnh sản phẩm, giá và tồn kho.";
 
 import { ProductImagesUploader } from "./ProductImagesUploader";
 import { CategorySelector } from "./CategorySelector";
@@ -36,8 +40,8 @@ export type ProductFormProps = {
   imageUpload: UseImageUploadReturn;
   /** Khi chỉnh sửa: truyền productId để gọi API update (payload sẽ có id). */
   productId?: number;
-  /** Giá trị ban đầu cho productName, productDescription (create = default, edit = từ API). */
-  defaultValues?: Partial<ProductFormValues>;
+  /** Giá trị ban đầu cho productName, productDescription, status (create = default, edit = từ API). */
+  defaultValues?: Partial<ProductFormValues & { status?: string }>;
   submitButtonLabel?: string;
   title?: string;
   /** Link "Quay lại" (vd: /product5 hoặc /products). */
@@ -45,6 +49,8 @@ export type ProductFormProps = {
   backLabel?: string;
   /** Phần action bổ sung ở header (vd: nút \"Xem trên marketplace\"). */
   headerAction?: ReactNode;
+  /** Action phụ dưới cùng form (vd: nút Xóa sản phẩm). */
+  footerAction?: ReactNode;
 };
 
 export function ProductForm({
@@ -59,10 +65,16 @@ export function ProductForm({
   backHref = "/product5",
   backLabel = "Quay lại danh sách",
   headerAction,
+  footerAction,
 }: ProductFormProps) {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [notification, setNotification] = useState<NotificationType | null>(null);
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const [pendingPublishData, setPendingPublishData] = useState<ProductFormValues | null>(null);
+
+  const productStatus = (defaultValues?.status ?? "DRAFT").toUpperCase();
+  const isActiveProduct = Boolean(productId && productStatus === "ACTIVE");
 
   const { shop, loading: shopLoading, error: shopError } = useMyShop();
 
@@ -79,7 +91,7 @@ export function ProductForm({
     watch,
     formState: { errors },
   } = useForm<ProductFormValues>({
-    resolver: zodResolver(productFormSchema),
+    resolver: zodResolver(productFormSchema) as Resolver<ProductFormValues>,
     defaultValues: {
       productName: defaultValues.productName ?? "",
       productDescription: defaultValues.productDescription ?? "",
@@ -151,7 +163,7 @@ export function ProductForm({
     attributes.addCustomAttributeValue(attrId, trimmed, tempId);
   };
 
-  const onSubmit = async (data: ProductFormValues) => {
+  const submitWithStatus = async (data: ProductFormValues, status: "ACTIVE" | "DRAFT") => {
     if (shopLoading) return;
     if (!shop) {
       setSubmitError(
@@ -171,12 +183,14 @@ export function ProductForm({
 
     setSubmitError(null);
     setSubmitLoading(true);
+    setShowPublishConfirm(false);
 
     try {
       const shopId = shop.id;
       const formData = prepareFormData({
         shopId,
         productId: productId ?? undefined,
+        status,
         productName: data.productName.trim(),
         productDescription: (data.productDescription ?? "").trim(),
         weight: Number(data.weight) >= 0 ? Number(data.weight) : 0,
@@ -195,16 +209,26 @@ export function ProductForm({
         : "/product/create";
       await apiClient.post(url, formData);
 
-      setNotification({
-        type: "success",
-        message: productId ? "Đã cập nhật sản phẩm thành công." : "Đã tạo sản phẩm thành công.",
-      });
-      // Tạm thời tắt redirect sau khi tạo; vẫn redirect sau khi cập nhật
-      if (productId) {
+      const successMsg =
+        status === "ACTIVE"
+          ? productId
+            ? "Đã cập nhật sản phẩm thành công."
+            : "Đã publish sản phẩm lên marketplace."
+          : productId
+            ? "Đã lưu bản nháp thành công."
+            : "Đã tạo sản phẩm (bản nháp) thành công.";
+      setNotification({ type: "success", message: successMsg });
+      // Sau khi tạo mới hoặc publish/cập nhật sản phẩm, đưa user về trang Tất cả sản phẩm
+      if (status === "ACTIVE" || !productId) {
+        setTimeout(() => {
+          window.location.assign("/products");
+        }, 1500);
+      } else if (productId) {
+        // Trường hợp chỉ lưu nháp cho sản phẩm đã tồn tại thì giữ behavior cũ: về lại trang edit
         const redirectTo = `/product/edit/${productId}`;
         setTimeout(() => {
           window.location.assign(redirectTo);
-        }, 2000);
+        }, 1500);
       }
       return;
     } catch (err: unknown) {
@@ -219,6 +243,55 @@ export function ProductForm({
       setSubmitError(msg);
       setNotification({ type: "error", message: msg });
     } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const onSubmit = (data: ProductFormValues) => {
+    if (isActiveProduct) {
+      submitWithStatus(data, "ACTIVE");
+    } else {
+      submitWithStatus(data, "DRAFT");
+    }
+  };
+
+  const handlePublishClick = (data: ProductFormValues) => {
+    setPendingPublishData(data);
+    setShowPublishConfirm(true);
+  };
+
+  const handlePublishConfirm = async () => {
+    if (!pendingPublishData || !productId) {
+      setShowPublishConfirm(false);
+      setPendingPublishData(null);
+      return;
+    }
+    try {
+      setSubmitLoading(true);
+      // Chỉ publish (update status) – không động vào nội dung/ảnh
+      await apiClient.patch("/product/seller/status", {
+        productId,
+        status: "ACTIVE",
+      });
+      setNotification({
+        type: "success",
+        message: "Đã publish sản phẩm lên marketplace.",
+      });
+      setTimeout(() => {
+        window.location.assign("/products");
+      }, 1500);
+    } catch (err: unknown) {
+      const msg =
+        axios.isAxiosError(err) && err.response?.data
+          ? String(err.response.data)
+          : err instanceof Error
+            ? err.message
+            : "Không thể publish sản phẩm. Vui lòng thử lại.";
+      setSubmitError(msg);
+      setNotification({ type: "error", message: msg });
+    } finally {
+      setShowPublishConfirm(false);
+      setPendingPublishData(null);
       setSubmitLoading(false);
     }
   };
@@ -281,7 +354,10 @@ export function ProductForm({
       </header>
 
       <main className="rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm sm:p-6">
-        <form className="space-y-5" onSubmit={rhfHandleSubmit(onSubmit)}>
+        <form
+          className="space-y-5"
+          onSubmit={rhfHandleSubmit(onSubmit)}
+        >
           <ProductImagesUploader
             productImages={imageUpload.productImages}
             productImagesError={imageUpload.productImagesError}
@@ -293,38 +369,43 @@ export function ProductForm({
             onDragIndexChange={imageUpload.setProductImagesDragIndex}
           />
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="productName"
-              className="block text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]"
-            >
-              Tên sản phẩm
-            </label>
-            <input
-              id="productName"
-              type="text"
-              {...register("productName")}
-              className="w-full rounded-md border border-[var(--input)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-              placeholder="VD: Áo thun Zara form rộng"
-            />
-            {errors.productName && (
-              <p className="text-sm text-red-600">{errors.productName.message}</p>
-            )}
-          </div>
+          <DisabledOverlay active={isActiveProduct}>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="productName"
+                className="block text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]"
+              >
+                Tên sản phẩm
+              </label>
+              <input
+                id="productName"
+                type="text"
+                {...register("productName")}
+                readOnly={isActiveProduct}
+                className="w-full rounded-md border border-[var(--input)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                placeholder="VD: Áo thun Zara form rộng"
+              />
+              {errors.productName && (
+                <p className="text-sm text-red-600">{errors.productName.message}</p>
+              )}
+            </div>
+          </DisabledOverlay>
 
-          <CategorySelector
-            selectedLeaf={category.selectedLeaf}
-            selectedPathLabel={category.selectedPathLabel}
-            loadingCategories={category.loadingCategories}
-            categoryError={category.categoryError}
-            isCategoryOpen={category.isCategoryOpen}
-            categoryColumns={category.categoryColumns}
-            categoryPath={category.categoryPath}
-            onOpenPopup={category.openCategoryPopup}
-            onClosePopup={category.closeCategoryPopup}
-            onCategoryClick={category.handleCategoryClick}
-            onConfirmSelection={handleConfirmCategorySelection}
-          />
+          <DisabledOverlay active={isActiveProduct}>
+            <CategorySelector
+              selectedLeaf={category.selectedLeaf}
+              selectedPathLabel={category.selectedPathLabel}
+              loadingCategories={category.loadingCategories}
+              categoryError={category.categoryError}
+              isCategoryOpen={category.isCategoryOpen}
+              categoryColumns={category.categoryColumns}
+              categoryPath={category.categoryPath}
+              onOpenPopup={category.openCategoryPopup}
+              onClosePopup={category.closeCategoryPopup}
+              onCategoryClick={category.handleCategoryClick}
+              onConfirmSelection={handleConfirmCategorySelection}
+            />
+          </DisabledOverlay>
 
           <AttributesSelector
             attributes={attributes.attributes}
@@ -385,40 +466,44 @@ export function ProductForm({
             onUpdateVariationValue={salesInfo.updateVariationValue}
             onFirstOptionImageUpload={salesInfo.handleFirstOptionImageUpload}
             onRemoveFirstOptionImage={salesInfo.removeFirstOptionImage}
+            editableOnlyPriceStock={isActiveProduct}
           />
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="weight"
-              className="block text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]"
-            >
-              Trọng lượng (gram)
-            </label>
-            <input
-              id="weight"
-              type="number"
-              min={0}
-              step={1}
-              {...register("weight")}
-              className="w-24 rounded-md border border-[var(--input)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-              placeholder="0"
-            />
-            {errors.weight && (
-              <p className="text-sm text-red-600">{errors.weight.message}</p>
-            )}
-          </div>
-
-          <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-sm">
-            <div className="border-b border-[var(--border)] bg-[var(--muted)]/50 px-4 py-3">
-              <h3 className="text-sm font-semibold text-[var(--foreground)]">
-                Phương thức giao hàng
-              </h3>
-              <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-                Ước tính phí theo trọng lượng sản phẩm
-              </p>
+          <DisabledOverlay active={isActiveProduct}>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="weight"
+                className="block text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]"
+              >
+                Trọng lượng (gram)
+              </label>
+              <input
+                id="weight"
+                type="number"
+                min={0}
+                step={1}
+                {...register("weight")}
+                className="w-24 rounded-md border border-[var(--input)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                placeholder="0"
+              />
+              {errors.weight && (
+                <p className="text-sm text-red-600">{errors.weight.message}</p>
+              )}
             </div>
-            <div className="p-3">
-              <ul
+          </DisabledOverlay>
+
+          <DisabledOverlay active={isActiveProduct}>
+            <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-sm">
+              <div className="border-b border-[var(--border)] bg-[var(--muted)]/50 px-4 py-3">
+                <h3 className="text-sm font-semibold text-[var(--foreground)]">
+                  Phương thức giao hàng
+                </h3>
+                <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+                  Ước tính phí theo trọng lượng sản phẩm
+                </p>
+              </div>
+              <div className="p-3">
+                <ul
                   className={`space-y-2 transition-opacity duration-200 ${
                     shippingFeeUpdating ? "opacity-50" : "opacity-100"
                   }`}
@@ -454,21 +539,87 @@ export function ProductForm({
                     );
                   })}
                 </ul>
+              </div>
             </div>
-          </div>
+          </DisabledOverlay>
 
-          <div className="space-y-2 pt-2">
-            <button
-              type="submit"
-              disabled={submitLoading}
-              className="inline-flex items-center justify-center rounded-full bg-[var(--primary)] px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--primary)]/90 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {submitLoading
-                ? "Đang lưu..."
-                : submitButtonLabel ?? (productId ? "Lưu thay đổi" : "Lưu sản phẩm")}
-            </button>
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {isActiveProduct ? (
+                <button
+                  type="submit"
+                  disabled={submitLoading}
+                  className="inline-flex items-center justify-center rounded-full bg-[var(--primary)] px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--primary)]/90 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {submitLoading ? "Đang lưu..." : submitButtonLabel ?? "Lưu thay đổi"}
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={submitLoading}
+                    onClick={rhfHandleSubmit((data) => submitWithStatus(data, "DRAFT"))}
+                    className="inline-flex items-center justify-center rounded-full border border-[var(--border)] bg-white px-6 py-2 text-sm font-semibold text-[var(--foreground)] shadow-sm transition hover:bg-[var(--muted)] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {submitLoading ? "Đang lưu..." : "Lưu (draft)"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={submitLoading}
+                    onClick={rhfHandleSubmit(handlePublishClick)}
+                    className="inline-flex items-center justify-center rounded-full bg-[var(--primary)] px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--primary)]/90 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {submitLoading ? "Đang xử lý..." : "Publish sản phẩm lên marketplace"}
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Slot cho nút phụ ở footer form, vd: Xóa sản phẩm */}
+            {footerAction && (
+              <div className="flex flex-wrap items-center gap-2">
+                {footerAction}
+              </div>
+            )}
           </div>
         </form>
+
+        {showPublishConfirm && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="publish-confirm-title"
+          >
+            <div className="max-w-md rounded-xl border border-[var(--border)] bg-white p-5 shadow-xl">
+              <h2 id="publish-confirm-title" className="text-lg font-semibold text-[var(--foreground)]">
+                Xác nhận publish sản phẩm
+              </h2>
+              <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+                {PUBLISH_CONFIRM_MESSAGE}
+              </p>
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPublishConfirm(false);
+                    setPendingPublishData(null);
+                  }}
+                  className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--muted)]"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePublishConfirm}
+                  className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--primary)]/90"
+                >
+                  Xác nhận
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

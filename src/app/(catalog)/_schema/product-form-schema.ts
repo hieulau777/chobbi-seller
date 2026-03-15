@@ -4,7 +4,7 @@ export const productFormSchema = z.object({
   productName: z.string().min(1, "Vui lòng nhập tên sản phẩm"),
   productDescription: z.string().optional(),
   weight: z.coerce
-    .number({ required_error: "Trọng lượng sản phẩm là bắt buộc" })
+    .number()
     .min(0, "Trọng lượng phải >= 0 (gram)"),
 });
 

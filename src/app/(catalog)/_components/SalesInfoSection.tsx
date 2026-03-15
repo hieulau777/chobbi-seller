@@ -6,6 +6,7 @@ import type {
   VariationRow,
   FirstColSpanInfo,
 } from "../_types";
+import { DisabledOverlay } from "./DisabledOverlay";
 
 type SalesInfoSectionProps = {
   classifications: ClassificationGroup[];
@@ -14,7 +15,7 @@ type SalesInfoSectionProps = {
   firstColSpanInfo: FirstColSpanInfo;
   variationValues: Record<string, { price: string; stock: string }>;
   optionDrafts: Record<string, string>;
-  firstOptionImages: Record<string, { file: File; previewUrl: string }>;
+  firstOptionImages: Record<string, { file?: File | null; previewUrl: string }>;
   salesInfoErrors: string[];
   onAddClassification: () => void;
   onRemoveClassification: (id: string) => void;
@@ -32,6 +33,8 @@ type SalesInfoSectionProps = {
     e: React.ChangeEvent<HTMLInputElement>,
   ) => void;
   onRemoveFirstOptionImage: (option: string) => void;
+  /** Khi true: chỉ cho sửa giá và tồn kho; phần phân loại/tùy chọn/ảnh bị disable và mờ */
+  editableOnlyPriceStock?: boolean;
 };
 
 export function SalesInfoSection({
@@ -52,6 +55,7 @@ export function SalesInfoSection({
   onUpdateVariationValue,
   onFirstOptionImageUpload,
   onRemoveFirstOptionImage,
+  editableOnlyPriceStock = false,
 }: SalesInfoSectionProps) {
   return (
     <section className="space-y-5 rounded-xl border border-[var(--border)] bg-gradient-to-b from-[var(--muted)]/5 to-transparent p-5 shadow-sm">
@@ -65,88 +69,97 @@ export function SalesInfoSection({
         </p>
       </div>
 
-      <div className="space-y-4">
-        {classifications.map((cls) => (
-          <div
-            key={cls.id}
-            className="rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm"
-          >
-            <div className="mb-3 flex items-center gap-2">
-              <input
-                type="text"
-                className="flex-1 rounded-lg border border-[var(--input)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
-                placeholder="Tên phân loại (VD: Màu sắc)"
-                value={cls.name}
-                onChange={(e) =>
-                  onUpdateClassificationName(cls.id, e.target.value)
-                }
-              />
-              <button
-                type="button"
-                onClick={() => onRemoveClassification(cls.id)}
-                className="rounded-full p-1.5 text-[var(--muted-foreground)] hover:bg-red-100 hover:text-red-600"
-                aria-label="Xóa phân loại"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {cls.options.map((opt) => (
-                <span
-                  key={opt}
-                  className="inline-flex items-center gap-1 rounded-full bg-[var(--primary)]/10 px-2.5 py-1 text-xs font-medium text-[var(--primary)]"
-                >
-                  {opt}
-                  <button
-                    type="button"
-                    onClick={() => onRemoveOption(cls.id, opt)}
-                    className="rounded-full hover:bg-[var(--primary)]/20"
-                    aria-label={`Xóa ${opt}`}
-                  >
-                    <X className="size-3" />
-                  </button>
-                </span>
-              ))}
-              <div className="inline-flex items-center gap-1">
+      <DisabledOverlay active={editableOnlyPriceStock}>
+        <div className="space-y-4">
+          {classifications.map((cls) => (
+            <div
+              key={cls.id}
+              className="rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm"
+            >
+              <div className="mb-3 flex items-center gap-2">
                 <input
                   type="text"
-                  className="w-24 rounded-lg border border-[var(--input)] px-2.5 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
-                  placeholder="Thêm tùy chọn"
-                  value={optionDrafts[cls.id] ?? ""}
+                  readOnly={editableOnlyPriceStock}
+                  className="flex-1 rounded-lg border border-[var(--input)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+                  placeholder="Tên phân loại (VD: Màu sắc)"
+                  value={cls.name}
                   onChange={(e) =>
-                    onOptionDraftChange(cls.id, e.target.value)
+                    onUpdateClassificationName(cls.id, e.target.value)
                   }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      onAddOption(cls.id, (optionDrafts[cls.id] ?? "").trim());
-                    }
-                  }}
                 />
-                <button
-                  type="button"
-                  onClick={() =>
-                    onAddOption(cls.id, (optionDrafts[cls.id] ?? "").trim())
-                  }
-                  className="rounded-lg bg-[var(--primary)] px-2.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-[var(--primary)]/90"
-                >
-                  Thêm
-                </button>
+                {!editableOnlyPriceStock && (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveClassification(cls.id)}
+                    className="rounded-full p-1.5 text-[var(--muted-foreground)] hover:bg-red-100 hover:text-red-600"
+                    aria-label="Xóa phân loại"
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {cls.options.map((opt) => (
+                  <span
+                    key={opt}
+                    className="inline-flex items-center gap-1 rounded-full bg-[var(--primary)]/10 px-2.5 py-1 text-xs font-medium text-[var(--primary)]"
+                  >
+                    {opt}
+                    {!editableOnlyPriceStock && (
+                      <button
+                        type="button"
+                        onClick={() => onRemoveOption(cls.id, opt)}
+                        className="rounded-full hover:bg-[var(--primary)]/20"
+                        aria-label={`Xóa ${opt}`}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    )}
+                  </span>
+                ))}
+                {!editableOnlyPriceStock && (
+                  <div className="inline-flex items-center gap-1">
+                    <input
+                      type="text"
+                      className="w-24 rounded-lg border border-[var(--input)] px-2.5 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+                      placeholder="Thêm tùy chọn"
+                      value={optionDrafts[cls.id] ?? ""}
+                      onChange={(e) =>
+                        onOptionDraftChange(cls.id, e.target.value)
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          onAddOption(cls.id, (optionDrafts[cls.id] ?? "").trim());
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onAddOption(cls.id, (optionDrafts[cls.id] ?? "").trim())
+                      }
+                      className="rounded-lg bg-[var(--primary)] px-2.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-[var(--primary)]/90"
+                    >
+                      Thêm
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        ))}
-        {classifications.length < 2 && (
-          <button
-            type="button"
-            onClick={onAddClassification}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[var(--border)] bg-white px-4 py-3 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 hover:text-[var(--primary)]"
-          >
-            <Plus className="size-4" />
-            Thêm phân loại hàng
-          </button>
-        )}
-      </div>
+          ))}
+          {!editableOnlyPriceStock && classifications.length < 2 && (
+            <button
+              type="button"
+              onClick={onAddClassification}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[var(--border)] bg-white px-4 py-3 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 hover:text-[var(--primary)]"
+            >
+              <Plus className="size-4" />
+              Thêm phân loại hàng
+            </button>
+          )}
+        </div>
+      </DisabledOverlay>
 
       {classificationsWithOptions.length === 0 ? (
         <div className="space-y-4 rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm">
@@ -234,51 +247,57 @@ export function SalesInfoSection({
                             className="align-top px-4 py-3"
                           >
                             {firstOption && (
-                              <div className="flex flex-col gap-2">
-                                <span className="font-medium">
-                                  {firstOption}
-                                </span>
-                                <div className="flex flex-col gap-1">
-                                  {firstOptionImages[firstOption] ? (
-                                    <div className="relative inline-flex w-fit">
-                                      <img
-                                        src={
-                                          firstOptionImages[firstOption]
-                                            .previewUrl
-                                        }
-                                        alt={firstOption}
-                                        className="h-14 w-14 rounded-lg border border-[var(--border)] object-cover shadow-sm"
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          onRemoveFirstOptionImage(firstOption)
-                                        }
-                                        className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white transition-colors hover:bg-red-600"
-                                        aria-label={`Xóa ảnh ${firstOption}`}
-                                      >
-                                        <X className="size-3" />
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-[var(--border)] bg-[var(--muted)]/30 px-2.5 py-2 text-xs text-[var(--muted-foreground)] transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--muted)]/50">
-                                      <ImagePlus className="size-4" />
-                                      Thêm ảnh
-                                      <input
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={(e) =>
-                                          onFirstOptionImageUpload(
-                                            firstOption,
-                                            e,
-                                          )
-                                        }
-                                      />
-                                    </label>
-                                  )}
+                              <DisabledOverlay active={editableOnlyPriceStock}>
+                                <div className="flex flex-col gap-2 min-h-[80px]">
+                                  <span className="font-medium">
+                                    {firstOption}
+                                  </span>
+                                  <div className="flex flex-col gap-1">
+                                    {firstOptionImages[firstOption] ? (
+                                      <div className="relative inline-flex w-fit">
+                                        <img
+                                          src={
+                                            firstOptionImages[firstOption]
+                                              .previewUrl
+                                          }
+                                          alt={firstOption}
+                                          className="h-14 w-14 rounded-lg border border-[var(--border)] object-cover shadow-sm"
+                                        />
+                                        {!editableOnlyPriceStock && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              onRemoveFirstOptionImage(firstOption)
+                                            }
+                                            className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white transition-colors hover:bg-red-600"
+                                            aria-label={`Xóa ảnh ${firstOption}`}
+                                          >
+                                            <X className="size-3" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    ) : editableOnlyPriceStock ? (
+                                      <span className="text-xs text-[var(--muted-foreground)]">—</span>
+                                    ) : (
+                                      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-[var(--border)] bg-[var(--muted)]/30 px-2.5 py-2 text-xs text-[var(--muted-foreground)] transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--muted)]/50">
+                                        <ImagePlus className="size-4" />
+                                        Thêm ảnh
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          className="hidden"
+                                          onChange={(e) =>
+                                            onFirstOptionImageUpload(
+                                              firstOption,
+                                              e,
+                                            )
+                                          }
+                                        />
+                                      </label>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
+                              </DisabledOverlay>
                             )}
                           </td>
                         )}

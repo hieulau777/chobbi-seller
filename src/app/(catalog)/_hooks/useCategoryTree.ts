@@ -16,6 +16,7 @@ export type UseCategoryTreeResult = {
   openCategoryPopup: () => void;
   closeCategoryPopup: () => void;
   handleCategoryClick: (levelIndex: number, node: CategoryNode) => void;
+  resetCategory: () => void;
 };
 
 export function useCategoryTree(
@@ -60,6 +61,10 @@ export function useCategoryTree(
     });
   }, []);
 
+  const resetCategory = useCallback(() => {
+    setCategoryPath([]);
+  }, []);
+
   return {
     selectedLeaf,
     selectedPathLabel,
@@ -71,5 +76,6 @@ export function useCategoryTree(
     openCategoryPopup,
     closeCategoryPopup,
     handleCategoryClick,
+    resetCategory,
   };
 }

@@ -22,8 +22,14 @@ import {
   HelpCircle,
   FileText,
   Bell,
+  Megaphone,
+  Percent,
+  Zap,
+  TicketPercent,
+  Palette,
 } from "lucide-react";
 import { useSellerNotificationRealtime } from "@/hooks/useSellerNotificationRealtime";
+import { useMyShop } from "@/hooks/useMyShop";
 import type { NotificationDto } from "@/types/notification";
 import apiClient from "@/lib/api-client";
 import { logout as clearBackendToken } from "@/lib/auth";
@@ -42,6 +48,8 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+
+  const { shop } = useMyShop();
 
   const {
     data: notifications = [],
@@ -130,9 +138,15 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const isProducts = pathname === "/products" || pathname === "/";
+  const isProducts = pathname === "/products";
   const isCreate = pathname === "/product/create";
   const isOrders = pathname === "/orders";
+  const isShopDecorator = pathname === "/shop/decorator";
+  const isRevenue = pathname === "/revenue";
+  const isGuide = pathname === "/guide";
+  const isMarketingPromotions = pathname === "/marketing/promotions";
+  const isMarketingFlashSale = pathname === "/marketing/flash-sale";
+  const isMarketingCoupons = pathname === "/marketing/coupons";
 
   const statusParam = searchParams.get("status");
 
@@ -173,7 +187,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
         className="flex-shrink-0 border-b border-white/15 text-white shadow-sm"
         style={{ background: "var(--header-bg)" }}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        <div className="flex w-full items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link
             href="/products"
             className="flex items-center gap-3 rounded-lg transition-opacity hover:opacity-90"
@@ -283,11 +297,20 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
               onClick={() => setUserMenuOpen((prev) => !prev)}
               className="flex items-center gap-2.5 rounded-full bg-white/15 py-1.5 pl-1.5 pr-3 shadow-sm ring-1 ring-white/20 transition hover:bg-white/25 hover:ring-white/30"
             >
-              <span className="flex size-9 items-center justify-center rounded-full bg-white text-[var(--primary)] text-sm font-bold shadow-sm">
-                S
+              <span className="flex size-9 items-center justify-center overflow-hidden rounded-full bg-white text-[var(--primary)] text-sm font-bold shadow-sm">
+                {shop?.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={shop.avatar.startsWith("http") ? shop.avatar : `/api/backend/static/${shop.avatar}`}
+                    alt={shop.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <Store className="size-5" />
+                )}
               </span>
-              <span className="max-w-[100px] truncate text-sm font-medium sm:max-w-[120px]">
-                Seller #1
+              <span className="max-w-[120px] truncate text-sm font-medium sm:max-w-[160px]">
+                {shop?.name ?? "Shop của bạn"}
               </span>
               <ChevronDown
                 className={`size-4 text-white/80 transition-transform ${
@@ -306,12 +329,21 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                 <div className="absolute right-0 top-full z-20 mt-2 w-72 overflow-hidden rounded-xl border border-[var(--border)] bg-white text-[var(--foreground)] shadow-xl ring-1 ring-black/5">
                   <div className="border-b border-[var(--border)] bg-[var(--muted)]/30 px-4 py-4">
                     <div className="flex items-center gap-3">
-                      <span className="flex size-12 items-center justify-center rounded-full bg-[var(--primary)] text-lg font-bold text-white shadow-inner">
-                        S
+                      <span className="flex size-12 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)] text-lg font-bold text-white shadow-inner">
+                        {shop?.avatar ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={shop.avatar.startsWith("http") ? shop.avatar : `/api/backend/static/${shop.avatar}`}
+                            alt={shop.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <Store className="size-6" />
+                        )}
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold text-[var(--foreground)]">
-                          Seller #1
+                          {shop?.name ?? "Shop của bạn"}
                         </p>
                         <p className="text-xs text-[var(--muted-foreground)]">
                           Tài khoản seller
@@ -355,10 +387,25 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Body: sidebar + content, chiều cao = phần còn lại dưới header */}
-      <div className="mx-auto flex w-full max-w-7xl flex-1 min-h-0 overflow-hidden gap-4 px-4 py-4 md:py-6">
+      <div className="flex w-full flex-1 min-h-0 overflow-hidden gap-4 px-4 py-4 md:py-6">
         {/* Sidebar: hiện đại, scroll riêng trong cột */}
-        <aside className="hidden w-64 flex-shrink-0 flex flex-col min-h-0 overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-sm md:flex">
+        <aside className="hidden w-72 flex-shrink-0 flex flex-col min-h-0 overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-sm md:flex">
           <div className="min-h-0 flex-1 overflow-y-auto p-3 text-sm">
+            {/* Hướng dẫn sử dụng */}
+            <div className="mb-3">
+              <Link
+                href="/guide"
+                className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                  isGuide
+                    ? "bg-[var(--primary)]/10 font-medium text-[var(--primary)]"
+                    : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                }`}
+              >
+                <HelpCircle className="size-4 text-[var(--muted-foreground)]" />
+                <span>Hướng dẫn sử dụng</span>
+              </Link>
+            </div>
+
             {/* Quản lý sản phẩm */}
             <div className="mb-1">
               <button
@@ -405,10 +452,10 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
 
             <div className="my-3 h-px bg-[var(--border)]" />
 
-            {/* Đơn hàng */}
+            {/* Quản lý đơn hàng */}
             <div className="mb-1">
               <p className="mb-1.5 px-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-                Đơn hàng
+                Quản lý đơn hàng
               </p>
               <div className="flex flex-col gap-0.5">
                 <Link
@@ -449,26 +496,112 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
 
             <div className="my-3 h-px bg-[var(--border)]" />
 
+            {/* Quản lý shop */}
+            <div className="mb-1">
+              <p className="mb-1.5 px-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+                Quản lý shop
+              </p>
+              <div className="flex flex-col gap-0.5">
+                <Link
+                  href="/shop/info"
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    pathname === "/shop/info"
+                      ? "bg-[var(--primary)]/10 font-medium text-[var(--primary)]"
+                      : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                  }`}
+                >
+                  <Store className="size-4 text-[var(--muted-foreground)]" />
+                  Hồ sơ shop
+                </Link>
+                <Link
+                  href="/shop/decorator"
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    isShopDecorator
+                      ? "bg-[var(--primary)]/10 font-medium text-[var(--primary)]"
+                      : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                  }`}
+                >
+                  <Palette className="size-4 text-[var(--muted-foreground)]" />
+                  Trang trí shop
+                </Link>
+              </div>
+            </div>
+
+            <div className="my-3 h-px bg-[var(--border)]" />
+
+            {/* Kênh marketing */}
+            <div className="mb-1">
+              <p className="mb-1.5 px-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+                Kênh marketing
+              </p>
+              <div className="flex flex-col gap-0.5">
+                <Link
+                  href="/marketing/promotions"
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    isMarketingPromotions
+                      ? "bg-[var(--primary)]/10 font-medium text-[var(--primary)]"
+                      : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                  }`}
+                >
+                  <Percent className="size-4 text-[var(--muted-foreground)]" />
+                  <span>Khuyến mãi của shop</span>
+                  <span className="ml-1 rounded-full bg-[var(--muted)] px-1 text-[7px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+                    in&nbsp;progress
+                  </span>
+                </Link>
+                <Link
+                  href="/marketing/flash-sale"
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    isMarketingFlashSale
+                      ? "bg-[var(--primary)]/10 font-medium text-[var(--primary)]"
+                      : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                  }`}
+                >
+                  <Zap className="size-4 text-[var(--muted-foreground)]" />
+                  <span>Flash sale của shop</span>
+                  <span className="ml-1 rounded-full bg-[var(--muted)] px-1 text-[7px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+                    in&nbsp;progress
+                  </span>
+                </Link>
+                <Link
+                  href="/marketing/coupons"
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    isMarketingCoupons
+                      ? "bg-[var(--primary)]/10 font-medium text-[var(--primary)]"
+                      : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                  }`}
+                >
+                  <TicketPercent className="size-4 text-[var(--muted-foreground)]" />
+                  <span>Coupon của shop</span>
+                  <span className="ml-1 rounded-full bg-[var(--muted)] px-1 text-[7px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+                    in&nbsp;progress
+                  </span>
+                </Link>
+              </div>
+            </div>
+
+            <div className="my-3 h-px bg-[var(--border)]" />
+
             {/* Thống kê */}
             <div className="mb-1">
               <p className="mb-1.5 px-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
                 Thống kê
               </p>
               <div className="flex flex-col gap-0.5">
-                <button
-                  type="button"
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
+                <Link
+                  href="/revenue"
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    isRevenue
+                      ? "bg-[var(--primary)]/10 font-medium text-[var(--primary)]"
+                      : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                  }`}
                 >
                   <BarChart3 className="size-4 text-[var(--muted-foreground)]" />
-                  Doanh thu
-                </button>
-                <button
-                  type="button"
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
-                >
-                  <TrendingUp className="size-4 text-[var(--muted-foreground)]" />
-                  Sản phẩm bán chạy
-                </button>
+                  <span>Doanh thu</span>
+                  <span className="ml-1 rounded-full bg-[var(--muted)] px-1 text-[7px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+                    in&nbsp;progress
+                  </span>
+                </Link>
               </div>
             </div>
 
@@ -480,27 +613,20 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                 Cài đặt
               </p>
               <div className="flex flex-col gap-0.5">
-                <button
-                  type="button"
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
-                >
-                  <Store className="size-4 text-[var(--muted-foreground)]" />
-                  Hồ sơ shop
-                </button>
-                <button
-                  type="button"
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
+                <Link
+                  href="/payment"
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    pathname === "/payment"
+                      ? "bg-[var(--primary)]/10 font-medium text-[var(--primary)]"
+                      : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                  }`}
                 >
                   <CreditCard className="size-4 text-[var(--muted-foreground)]" />
-                  Thanh toán
-                </button>
-                <button
-                  type="button"
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
-                >
-                  <Truck className="size-4 text-[var(--muted-foreground)]" />
-                  Vận chuyển
-                </button>
+                  <span>Thanh toán</span>
+                  <span className="ml-1 rounded-full bg-[var(--muted)] px-1 text-[7px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+                    in&nbsp;progress
+                  </span>
+                </Link>
               </div>
             </div>
 
@@ -534,4 +660,3 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-

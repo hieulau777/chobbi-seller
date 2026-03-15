@@ -73,19 +73,13 @@ export default function OrdersPage() {
   const performShip = async (ids: number[]) => {
     if (ids.length === 0) return;
     await apiClient.post("/order/ship", ids);
-    setOrders((prev) =>
-      prev.map((o) => (ids.includes(o.orderId) ? { ...o, status: "SHIPPED" } : o))
-    );
+    setOrders((prev) => prev.filter((o) => !ids.includes(o.orderId)));
   };
 
   const performCancel = async (ids: number[]) => {
     if (ids.length === 0) return;
     await apiClient.post("/order/cancel", ids);
-    setOrders((prev) =>
-      prev.map((o) =>
-        ids.includes(o.orderId) ? { ...o, status: "CANCELED" } : o
-      )
-    );
+    setOrders((prev) => prev.filter((o) => !ids.includes(o.orderId)));
   };
 
   const handleShip = async (orderId: number) => {

@@ -62,6 +62,9 @@ export function AlertTokenAfterAuth() {
           if (typeof window !== "undefined") {
             window.localStorage.setItem("token", data.token!);
           }
+
+          // Nếu backend cho biết seller đã có shop thì vào thẳng dashboard,
+          // còn chưa có shop thì chuyển sang luồng onboarding tạo shop.
           if (data.hasShop) {
             router.replace("/products");
           } else {

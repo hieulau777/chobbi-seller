@@ -1,9 +1,23 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { SellerShell } from "../../components/SellerShell";
+import { RequireSellerAuth } from "../../components/RequireSellerAuth";
 
-export default function CatalogLayout({
+export default async function CatalogLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <SellerShell>{children}</SellerShell>;
+  const session = await auth();
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  return (
+    <>
+      <RequireSellerAuth />
+      <SellerShell>{children}</SellerShell>
+    </>
+  );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "../providers/QueryProvider";
@@ -31,7 +32,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} bg-[var(--background)] text-[var(--foreground)] antialiased`}
       >
         <SessionProvider>
-          <AlertTokenAfterAuth />
+          <Suspense fallback={null}>
+            <AlertTokenAfterAuth />
+          </Suspense>
           <QueryProvider>{children}</QueryProvider>
         </SessionProvider>
       </body>

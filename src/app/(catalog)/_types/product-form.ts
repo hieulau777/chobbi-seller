@@ -21,6 +21,12 @@ export type ProductTierDto = {
   hasImages: boolean;
 };
 
+export type ProductOptionImageDto = {
+  tierId: number;
+  optionId: number;
+  url: string;
+};
+
 export type ProductSelectedAttributeDto = {
   id: number;
   selectedValueIds: number[];
@@ -41,11 +47,13 @@ export type ProductVariationDto = {
 export type ProductDetailResponse = {
   productId: number;
   productName: string;
+  /** ACTIVE | DRAFT */
+  status?: string;
   description: string;
   weight?: number;
   images: ProductImageDto[];
   tiers: ProductTierDto[];
-  optionImages: unknown[];
+  optionImages: ProductOptionImageDto[];
   attributes: ReadProductAttributesDto[];
   selectedAttributes: ProductSelectedAttributeDto[];
   categoryTree: CategoryNode[];

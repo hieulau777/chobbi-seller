@@ -14,6 +14,7 @@ export type MappedProductFormData = {
   classifications: ClassificationGroup[];
   variationValues: VariationValues;
   selectedCategoryId: number;
+  firstOptionImages: Record<string, string>;
 };
 
 export function mapProductToFormData(
@@ -63,6 +64,22 @@ export function mapProductToFormData(
     };
   }
 
+  // Map option-level images (only from first tier with images) -> option name -> image URL
+  const firstOptionImages: Record<string, string> = {};
+  const firstTier = product.tiers?.find((t) => t.hasImages);
+  if (firstTier && product.optionImages && product.optionImages.length > 0) {
+    const optionsById = new Map<number, string>();
+    firstTier.options.forEach((opt) => {
+      optionsById.set(opt.id, opt.name);
+    });
+    for (const oi of product.optionImages) {
+      if (oi.tierId !== firstTier.id) continue;
+      const optName = optionsById.get(oi.optionId);
+      if (!optName) continue;
+      firstOptionImages[optName] = oi.url;
+    }
+  }
+
   return {
     name,
     description,
@@ -71,5 +88,6 @@ export function mapProductToFormData(
     classifications,
     variationValues,
     selectedCategoryId: product.selectedCategoryId,
+    firstOptionImages,
   };
 }
