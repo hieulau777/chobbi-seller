@@ -44,7 +44,7 @@ export type ProductFormProps = {
   defaultValues?: Partial<ProductFormValues & { status?: string }>;
   submitButtonLabel?: string;
   title?: string;
-  /** Link "Quay lại" (vd: /product5 hoặc /products). */
+  /** Link "Quay lại" (vd: /products). */
   backHref?: string;
   backLabel?: string;
   /** Phần action bổ sung ở header (vd: nút \"Xem trên marketplace\"). */
@@ -62,7 +62,7 @@ export function ProductForm({
   defaultValues = defaultProductFormValues,
   submitButtonLabel,
   title,
-  backHref = "/product5",
+  backHref = "/products",
   backLabel = "Quay lại danh sách",
   headerAction,
   footerAction,
@@ -72,6 +72,8 @@ export function ProductForm({
   const [notification, setNotification] = useState<NotificationType | null>(null);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   const [pendingPublishData, setPendingPublishData] = useState<ProductFormValues | null>(null);
+  const [categoryRequiredError, setCategoryRequiredError] = useState(false);
+  const [imagesRequiredError, setImagesRequiredError] = useState(false);
 
   const productStatus = (defaultValues?.status ?? "DRAFT").toUpperCase();
   const isActiveProduct = Boolean(productId && productStatus === "ACTIVE");
@@ -119,6 +121,7 @@ export function ProductForm({
     if (!category.selectedLeaf) return;
     category.closeCategoryPopup();
     attributes.loadAttributes(category.selectedLeaf.id);
+    setCategoryRequiredError(false);
   };
 
   const handleToggleAttributeDropdown = (attrId: number) => {
@@ -172,16 +175,25 @@ export function ProductForm({
       return;
     }
     if (!salesInfo.validate()) return;
+
+    setSubmitError(null);
+    setCategoryRequiredError(false);
+    setImagesRequiredError(false);
+    imageUpload.setProductImagesError(null);
+
     if (!category.selectedLeaf) {
       setSubmitError("Vui lòng chọn ngành hàng.");
+      setCategoryRequiredError(true);
       return;
     }
     if (imageUpload.productImages.length === 0) {
-      setSubmitError("Vui lòng thêm ít nhất 1 ảnh sản phẩm.");
+      const msg = "Vui lòng thêm ít nhất 1 ảnh sản phẩm (thumbnail).";
+      setSubmitError(msg);
+      setImagesRequiredError(true);
+      imageUpload.setProductImagesError(msg);
       return;
     }
 
-    setSubmitError(null);
     setSubmitLoading(true);
     setShowPublishConfirm(false);
 
@@ -406,6 +418,11 @@ export function ProductForm({
               onConfirmSelection={handleConfirmCategorySelection}
             />
           </DisabledOverlay>
+          {categoryRequiredError && !category.selectedLeaf && (
+            <p className="mt-1 text-xs text-red-600">
+              Vui lòng chọn ngành hàng.
+            </p>
+          )}
 
           <AttributesSelector
             attributes={attributes.attributes}

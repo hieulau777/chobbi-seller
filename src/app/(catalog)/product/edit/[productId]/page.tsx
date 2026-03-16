@@ -126,7 +126,7 @@ export default function EditProductPage() {
           {loadError ?? "Không tìm thấy sản phẩm"}
         </p>
         <Link
-          href="/product5"
+          href="/products"
           className="text-sm font-medium text-[var(--primary)] underline-offset-4 hover:underline"
         >
           Quay lại danh sách sản phẩm
@@ -162,7 +162,7 @@ export default function EditProductPage() {
         defaultValues={initialFormValues}
         title="Chỉnh sửa sản phẩm"
         submitButtonLabel="Lưu thay đổi"
-        backHref="/product5"
+        backHref="/products"
         backLabel="Quay lại danh sách"
         headerAction={
           marketplaceHref ? (

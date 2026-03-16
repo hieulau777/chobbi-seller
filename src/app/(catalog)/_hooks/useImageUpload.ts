@@ -98,6 +98,7 @@ export function useImageUpload() {
     productImages,
     setProductImages,
     productImagesError,
+    setProductImagesError,
     productImagesDragIndex,
     setProductImagesDragIndex,
     handleProductImageUpload,

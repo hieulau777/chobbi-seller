@@ -20,7 +20,7 @@ export default function NewProductPage() {
       imageUpload={imageUpload}
       title="Thêm sản phẩm mới"
       submitButtonLabel="Lưu sản phẩm"
-      backHref="/product5"
+      backHref="/products"
       backLabel="Quay lại danh sách"
     />
   );
