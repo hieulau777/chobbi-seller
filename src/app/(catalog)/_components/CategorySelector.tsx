@@ -100,11 +100,6 @@ export function CategorySelector({
                       key={levelIndex}
                       className="flex min-w-[170px] max-w-[190px] flex-col rounded-lg border border-[var(--border)] bg-[var(--muted)]/20 p-2 text-sm"
                     >
-                      <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
-                        {levelIndex === 0
-                          ? "Ngành hàng cha"
-                          : `Cấp ${levelIndex + 1}`}
-                      </p>
                       <div className="h-[320px] min-h-0 space-y-1 overflow-y-auto pr-1">
                         {col.map((node) => {
                           const isActive =
