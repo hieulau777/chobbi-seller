@@ -2,9 +2,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { User } from "lucide-react";
+import Link from "next/link";
+import { ExternalLink, User } from "lucide-react";
 import { useMyShop } from "@/hooks/useMyShop";
 import apiClient from "@/lib/api-client";
+import { getMarketplaceBaseUrl } from "@/lib/marketplace-url";
 
 function avatarImageSrc(path: string | null | undefined): string {
   if (!path) return "";
@@ -82,15 +84,28 @@ export default function ShopInfoPage() {
 
   const displayAvatar = avatarPreview ?? (shop.avatar ? avatarImageSrc(shop.avatar) : null);
 
+  const marketplaceShopUrl = `${getMarketplaceBaseUrl()}/shop/${shop.id}`;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-[var(--foreground)]">
-          Hồ sơ shop
-        </h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          Cập nhật tên và avatar shop.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+            Hồ sơ shop
+          </h1>
+          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+            Cập nhật tên và avatar shop.
+          </p>
+        </div>
+        <Link
+          href={marketplaceShopUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 self-start rounded-lg border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] transition hover:bg-[var(--muted)]/30"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Xem shop trên marketplace
+        </Link>
       </div>
 
       <form

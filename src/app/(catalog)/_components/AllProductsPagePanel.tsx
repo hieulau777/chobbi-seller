@@ -7,6 +7,7 @@ import type { AllProductsPagePanelProps, ProductListTab } from "../_types/produc
 import { capitalizeVariationName, formatPrice, getImageUrl } from "../_utils/index2";
 import { useCategoryTree } from "../_hooks/useCategoryTree";
 import { CategorySelector } from "./CategorySelector";
+import { getMarketplaceBaseUrl } from "@/lib/marketplace-url";
 
 function slugify(text: string): string {
   return (
@@ -19,9 +20,6 @@ function slugify(text: string): string {
       .replace(/^-|-$/g, "") || "san-pham"
   );
 }
-
-const MARKETPLACE_BASE_URL =
-  process.env.NEXT_PUBLIC_CLIENT_BASE_URL ?? "http://localhost:3000";
 
 const TABS: { key: ProductListTab; label: string; showCount: boolean }[] = [
   { key: "all", label: "Tất cả", showCount: false },
@@ -261,7 +259,7 @@ export function AllProductsPagePanel(props: AllProductsPagePanelProps) {
               <tbody>
                 {products.map((p, index) => {
                   const slug = slugify(p.name);
-                  const marketplaceHref = `${MARKETPLACE_BASE_URL}/${slug}.${shopId}.${p.id}`;
+                  const marketplaceHref = `${getMarketplaceBaseUrl()}/${slug}.${shopId}.${p.id}`;
                   const isActiveProduct = p.status === "ACTIVE";
 
                   const variations = p.variations ?? [];

@@ -14,6 +14,7 @@ import { useImageUpload } from "../../../_hooks/useImageUpload";
 import { mapProductToFormData } from "../../../_utils/index";
 import { getImageUrl } from "../../../_utils/index2";
 import type { ProductDetailResponse } from "../../../_types";
+import { getMarketplaceBaseUrl } from "@/lib/marketplace-url";
 
 function slugify(text: string): string {
   return (
@@ -26,9 +27,6 @@ function slugify(text: string): string {
       .replace(/^-|-$/g, "") || "san-pham"
   );
 }
-
-const MARKETPLACE_BASE_URL =
-  process.env.NEXT_PUBLIC_CLIENT_BASE_URL ?? "http://localhost:3000";
 
 export default function EditProductPage() {
   const params = useParams<{ productId: string }>();
@@ -150,7 +148,7 @@ export default function EditProductPage() {
   const slug = slugify(initialFormValues.productName);
   const marketplaceHref =
     shop?.id != null
-      ? `${MARKETPLACE_BASE_URL}/${slug}.${shop.id}.${productId}`
+      ? `${getMarketplaceBaseUrl()}/${slug}.${shop.id}.${productId}`
       : null;
 
   return (

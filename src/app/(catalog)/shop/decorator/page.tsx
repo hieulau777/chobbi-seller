@@ -2,10 +2,13 @@
 
 import { Fragment, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ExternalLink } from "lucide-react";
 import apiClient from "@/lib/api-client";
 import { useMyShop } from "@/hooks/useMyShop";
 import { SelectProductsModal, type ShopCategoryUpdated } from "@/components/SelectProductsModal";
+import { getMarketplaceBaseUrl } from "@/lib/marketplace-url";
 
 type ShopCategoryProductDto = {
   id: number;
@@ -473,15 +476,28 @@ export default function ShopDecoratorPage() {
     );
   }
 
+  const marketplaceShopUrl = `${getMarketplaceBaseUrl()}/shop/${shop.id}`;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-[var(--foreground)]">
-          Trang trí shop
-        </h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          Tùy chỉnh banner và danh mục hiển thị trên trang shop của bạn.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+            Trang trí shop
+          </h1>
+          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+            Tùy chỉnh banner và danh mục hiển thị trên trang shop của bạn.
+          </p>
+        </div>
+        <Link
+          href={marketplaceShopUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 self-start rounded-lg border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] transition hover:bg-[var(--muted)]/30"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Xem shop trên marketplace
+        </Link>
       </div>
 
       {/* Tabs */}

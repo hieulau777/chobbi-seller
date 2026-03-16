@@ -7,14 +7,20 @@ import type { NotificationDto } from "@/types/notification";
 function getWebSocketUrl(): string {
   if (typeof window === "undefined") return "";
   const envWs = process.env.NEXT_PUBLIC_WS_URL;
-  if (envWs) return envWs;
+  if (envWs?.trim()) return envWs.trim();
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
   if (apiUrl.startsWith("http")) {
-    const origin = new URL(apiUrl).origin;
-    return origin.replace(/^http/, "ws") + "/ws";
+    try {
+      const origin = new URL(apiUrl).origin;
+      return `${origin}/ws`;
+    } catch {
+      // ignore
+    }
   }
-  const origin = window.location.origin;
-  return origin.replace(/^http/, "ws") + "/ws";
+  if (typeof process !== "undefined" && process.env.NODE_ENV === "development") {
+    console.warn("[Seller WS] NEXT_PUBLIC_WS_URL (hoặc NEXT_PUBLIC_API_URL) chưa set. Cần set để bật thông báo realtime.");
+  }
+  return "";
 }
 
 export function createNotificationClient(
@@ -26,8 +32,9 @@ export function createNotificationClient(
   const wsUrl = getWebSocketUrl();
   if (!wsUrl) return null;
 
+  const sockUrl = wsUrl.replace(/^ws:/, "http:").replace(/^wss:/, "https:");
   const client = new Client({
-    webSocketFactory: () => new SockJS(wsUrl) as unknown as WebSocket,
+    webSocketFactory: () => new SockJS(sockUrl) as unknown as WebSocket,
     connectHeaders: {
       Authorization: `Bearer ${token}`,
     },
