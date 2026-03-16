@@ -101,6 +101,9 @@ export function ProductForm({
     },
   });
 
+  const nameValue = watch("productName") ?? "";
+  const descriptionValue = watch("productDescription") ?? "";
+
   const weightGram = Number(watch("weight")) || 0;
   const shippingMethods = SHIPPING_METHODS;
 
@@ -400,6 +403,9 @@ export function ProductForm({
               {errors.productName && (
                 <p className="text-sm text-red-600">{errors.productName.message}</p>
               )}
+              <p className="text-[11px] text-[var(--muted-foreground)] text-right">
+                {nameValue.length}/120
+              </p>
             </div>
           </DisabledOverlay>
 
@@ -461,6 +467,9 @@ export function ProductForm({
                 {errors.productDescription.message}
               </p>
             )}
+            <p className="text-[11px] text-[var(--muted-foreground)] text-right">
+              {(descriptionValue ?? "").length}/3000
+            </p>
           </div>
 
           <SalesInfoSection
