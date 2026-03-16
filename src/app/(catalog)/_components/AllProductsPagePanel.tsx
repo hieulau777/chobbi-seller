@@ -298,10 +298,10 @@ export function AllProductsPagePanel(props: AllProductsPagePanelProps) {
                                 unoptimized
                               />
                             </Link>
-                            <div className="min-w-0">
+                            <div className="min-w-0 max-w-[150px]">
                               <Link
                                 href={`/product/edit/${p.id}`}
-                                className="line-clamp-1 text-sm font-semibold text-[var(--foreground)] hover:underline"
+                                className="line-clamp-1 text-[13px] font-semibold text-[var(--foreground)] hover:underline"
                               >
                                 {p.name}
                               </Link>
