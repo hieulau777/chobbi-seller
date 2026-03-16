@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   Package,
@@ -46,10 +46,20 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
   const blinkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
-  const { shop } = useMyShop();
+  const { shop, loading: shopLoading, notFound: shopNotFound } = useMyShop();
+
+  useEffect(() => {
+    if (shopLoading) return;
+    // Nếu chưa có shop (404 từ /shop/me hoặc không có dữ liệu),
+    // bắt buộc chuyển sang luồng onboarding tạo shop.
+    if (!shop || shopNotFound) {
+      router.replace("/onboarding/shop");
+    }
+  }, [shop, shopLoading, shopNotFound, router]);
 
   const {
     data: notifications = [],

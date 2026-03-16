@@ -14,10 +14,12 @@ export function useMyShop() {
   const [shop, setShop] = useState<ShopResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
   const refetch = async () => {
     setLoading(true);
     setError(null);
+    setNotFound(false);
     try {
       const res = await apiClient.get<ShopResponse>("/shop/me");
       const data = res.data;
@@ -27,13 +29,15 @@ export function useMyShop() {
         setShop(null);
       }
     } catch (e: any) {
+      const status = e?.response?.status;
       const msg =
-        e?.response?.status === 404
+        status === 404
           ? "Bạn chưa có shop."
           : e?.response?.data?.message ??
             "Không thể tải thông tin shop. Vui lòng thử lại.";
       setError(msg);
       setShop(null);
+      setNotFound(status === 404);
     } finally {
       setLoading(false);
     }
@@ -43,6 +47,6 @@ export function useMyShop() {
     refetch();
   }, []);
 
-  return { shop, loading, error, refetch };
+  return { shop, loading, error, notFound, refetch };
 }
 
